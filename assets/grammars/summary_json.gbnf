@@ -1,0 +1,12 @@
+root ::= "{" ws "\"bullets\"" ws ":" ws bullets ws "," ws "\"paragraph\"" ws ":" ws string ws "}" ws
+
+bullets ::= "[" ws string (ws "," ws string)* ws "]"
+
+string ::= "\"" chars "\""
+chars ::= char*
+char ::= [^"\\\x00-\x1F] | escape
+escape ::= "\\" (["\\/bfnrt] | "u" hex hex hex hex)
+
+hex ::= [0-9a-fA-F]
+
+ws ::= [ \t\n\r]*

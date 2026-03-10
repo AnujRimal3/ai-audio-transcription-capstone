@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.idea/
+.venv/
+venv/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# App runtime outputs
+artifacts/
+jobs/
+logs/
+*.db
+*.sqlite
+
+# Bundled offline assets (large) - do not commit
+assets/bin/*
+assets/models/whisper/*
+assets/models/llm/*
+
+# Keep folder structure placeholders
+!assets/bin/.gitkeep
+!assets/models/whisper/.gitkeep
+!assets/models/whisper/**/.gitkeep
+!assets/models/llm/.gitkeep
+
+# Asset cache (downloaded by bootstrap scripts)
+.asset_cache/
