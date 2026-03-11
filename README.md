@@ -500,4 +500,38 @@ The setup script will:
 5. Download the LLM model
 
 ### 4) Run
-Once the environment is set up and the assets are in place you can run the app from your IDE
+Once the environment is set up and the assets are in place you can run the app from your IDE using main.py.
+If you get an error complaining about the Python environment not being set proceed to step 5. If the program
+launches congratulations! You are good to go.
+
+### 5) Set Environment in IDE (This step may or not apply depending on your IDE)
+Manually setting the environment differs between IDEs. The following are instructions for manually setting
+the environment in PyCharm, but you should be able to find the instructions for setting the environment easily online.
+
+### Pycharm
+```
+Go to Settings > Python > Interpreter
+
+Click Add Interpreter > Add Local Interpreter...
+
+Choose the 'Select Existing' radio button
+
+Under type select 'uv'
+
+The 'Path to uv' and 'Environment' fields should already be filled in, but
+if they are not you will have to set them manually
+
+The 'Path to uv' field should point to your uv.exe that was installed earlier
+On Windows the default install path is 'C:\Users\%USER%\.local\bin\uv.exe
+
+The 'Environment' field should point to the python.exe in the .venv environment
+that was set up when the setup script was run
+The path to that will be based on where your project got installed
+On Windows it will look something like '~\ai-audio-transcription-capstone\.venv\Scripts\python.exe
+
+Once the 'Path to uv' and 'Environment' fields are populated with the correct information click on 'OK'
+
+Click on 'OK' once more to close out of 'Settings'
+```
+
+Your environment is now set and you will be able to run the program through main.py.
