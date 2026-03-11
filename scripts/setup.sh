@@ -28,7 +28,7 @@ echo
 
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment with Python 3.12..."
-    uv venv --python 3.12 .venv
+    uv venv --python 3.12 --seed .venv
 else
     echo "Virtual environment already exists."
 fi

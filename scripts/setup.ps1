@@ -27,7 +27,7 @@ Write-Host ""
 
 if (!(Test-Path ".venv")) {
     Write-Host "Creating virtual environment with Python 3.12..."
-    uv venv --python 3.12 .venv
+    uv venv --python 3.12 --seed .venv
 }
 else {
     Write-Host "Virtual environment already exists."
