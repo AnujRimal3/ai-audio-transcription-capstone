@@ -102,7 +102,17 @@ def ensure_dirs() -> None:
 
 
 def dir_has_files(path: Path) -> bool:
-    return path.exists() and any(path.iterdir())
+    if not path.exists():
+        return False
+
+    for item in path.iterdir():
+        if item.name == ".gitkeep":
+            continue
+        if item.name.startswith("."):
+            continue
+        return True
+
+    return False
 
 
 def asset_present(spec: AssetSpec) -> bool:
