@@ -1,6 +1,6 @@
 # AI-Assisted Audio Transcription and Summarization System
 
-This repository contains the senior capstone project for the Informatics program.
+A fully offline desktop application that converts audio or video recordings into transcripts and structured summaries using local AI models. This repository contains the senior capstone project for the Informatics program.
 
 ---
 
