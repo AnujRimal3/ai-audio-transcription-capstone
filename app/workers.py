@@ -50,10 +50,11 @@ from PySide6.QtCore import QObject, Signal, QThread
 from app.settings import AppSettings
 from app.paths import artifacts_dir, bundled_whisper_small_dir
 from app.ffmpeg_util import find_ffmpeg, convert_to_wav_16k_mono
-from app.whisper_util import transcribe_file
+from app.whisper_util import transcribe_file, resolve_whisper_runtime, merge_segments_into_sentences
 from app.llama_util import find_llama, summarize_general_chunked, ChunkedSummaryConfig
 from app.storage import connect
 from app.models import TranscriptResult
+from app.diarization_util import run_diarization_subprocess, assign_speakers_to_segments, normalize_speaker_labels
 
 
 class JobSignals(QObject):
@@ -166,17 +167,56 @@ class TranscribeSummarizeWorker(QThread):
             # ----------------------------
             # Step 4: Transcribe audio with faster-whisper
             # ----------------------------
-            self.signals.progress.emit("Transcribing with faster-whisper...")
+            self.signals.progress.emit("Preparing transcription runtime...")
+
+            final_device, final_compute_type = resolve_whisper_runtime(
+                self.settings.device,
+                self.settings.compute_type,
+            )
+
+            self.signals.progress.emit(
+                f"Transcribing with faster-whisper... "
+                f"(device={final_device}, compute_type={final_compute_type})"
+            )
+
             tr: TranscriptResult = transcribe_file(
                 wav_out,
                 model_name_or_path=model_ref,
-                device=self.settings.device,
-                compute_type="int8",                # currently hardcoded for efficient inference -Zack
-                language=self.settings.language
+                device=final_device,
+                compute_type=final_compute_type,
+                language=self.settings.language,
             )
 
             # ----------------------------
-            # Step 5: Save transcript JSON output
+            # Step 5: Optional speaker diarization
+            # ----------------------------
+            if self.settings.enable_diarization:
+                diar_py = self.settings.diarization_python_path.strip()
+                if not diar_py:
+                    raise RuntimeError(
+                        "Speaker diarization is enabled, but no diarization Python path is configured in Settings."
+                    )
+
+                self.signals.progress.emit("Running speaker diarization..."
+                                           f"(device={final_device}, compute_type={final_compute_type})")
+                diarization_json_path = artifacts_dir() / job_id / "diarization.json"
+
+                speaker_turns = run_diarization_subprocess(
+                    wav_path=wav_out,
+                    output_json_path=diarization_json_path,
+                    diarization_python=diar_py,
+                    hf_token=self.settings.hf_token,
+                    device=self.settings.device,
+                )
+
+                speaker_turns = normalize_speaker_labels(speaker_turns)
+
+                tr.segments = assign_speakers_to_segments(tr.segments, speaker_turns)
+
+                tr.segments = merge_segments_into_sentences(tr.segments)
+
+            # ----------------------------
+            # Step 6: Save transcript JSON output
             # ----------------------------
             out_dir = artifacts_dir() / job_id
             out_dir.mkdir(parents=True, exist_ok=True)
@@ -193,15 +233,21 @@ class TranscribeSummarizeWorker(QThread):
             transcript_json_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
             transcript_json = str(transcript_json_path)
 
-            # Build plain full transcript text for summarization
-            full_text = "\n".join([s.text for s in tr.segments]).strip()
+            # Include speaker labels in the summary input
+            full_text = "\n".join([f"{s.speaker}: {s.text}" for s in tr.segments]).strip()
 
             # ----------------------------
-            # Step 6: Summarize transcript with llama.cpp if GGUF is configured
+            # Step 7: Summarize transcript with llama.cpp if GGUF is configured
             # ----------------------------
             summary_md_path = out_dir / "summary.md"
             if self.settings.llama_model_path.strip():
-                self.signals.progress.emit("Summarizing locally with llama.cpp (chunked)...")
+                if self.settings.llama_use_gpu:
+                    self.signals.progress.emit(
+                        f"Summarizing with llama.cpp GPU offload "
+                        f"(gpu_layers={self.settings.llama_gpu_layers})..."
+                    )
+                else:
+                    self.signals.progress.emit("Summarizing locally with llama.cpp (chunked)...")
 
                 # Resolve the llama.cpp executable
                 llama_bin = find_llama(self.settings.llama_path)
@@ -223,7 +269,9 @@ class TranscribeSummarizeWorker(QThread):
                     ctx=self.settings.llama_ctx,
                     threads=self.settings.llama_threads,
                     config=cfg,
-                    progress_cb=progress
+                    progress_cb=progress,
+                    use_gpu=self.settings.llama_use_gpu,
+                    gpu_layers=self.settings.llama_gpu_layers,
                 )
 
                 # Save final Markdown summary
@@ -239,7 +287,7 @@ class TranscribeSummarizeWorker(QThread):
                 summary_md = str(summary_md_path)
 
             # ----------------------------
-            # Step 7: Mark job as complete in the database
+            # Step 8: Mark job as complete in the database
             # ----------------------------
             with connect() as conn:
                 conn.execute(

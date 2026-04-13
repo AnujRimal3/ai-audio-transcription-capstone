@@ -71,6 +71,10 @@ class TranscriptSegment:
     # Transcribed text for the segment
     text: str
 
+    # Speaker label assigned during diarization
+    # Defaults to UNKNOWN when diarization is disabled or no match is found
+    speaker: str = "UNKNOWN"
+
 # ---------------------------------------------------------
 # TranscriptResult
 # ---------------------------------------------------------

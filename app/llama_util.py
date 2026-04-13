@@ -336,6 +336,8 @@ def _run_llama(
     max_tokens: int = 260,
     timeout_s: int = 240,
     grammar_file: Optional[Path] = None,
+    use_gpu: bool = False,
+    gpu_layers: int = 0,
 ) -> str:
     """
     Execute llama.cpp and return cleaned text output.
@@ -399,6 +401,10 @@ def _run_llama(
         "--temp", "0.2",            # temperature for stability
         "--top-p", "0.9",           # nucleus sampling
     ]
+
+    # GPU offload for CUDA-enabled llama.cpp builds
+    if use_gpu and gpu_layers > 0:
+        cmd_base += ["-ngl", str(gpu_layers)]
 
     if threads and threads > 0:
         cmd_base += ["-t", str(threads)]
@@ -642,6 +648,8 @@ def summarize_general_chunked(
     threads: int = 0,
     config: ChunkedSummaryConfig | None = None,
     progress_cb=None,
+    use_gpu: bool = False,
+    gpu_layers: int = 0,
 ) -> str:
     """
     Summarize transcript text using a chunked map→reduce pipeline.
@@ -705,8 +713,9 @@ def summarize_general_chunked(
             threads=threads,
             max_tokens=240,
             timeout_s=240,
-            grammar_file=None,  # We don't need the grammar file for the map step
-                                # Because it doesn't need to output in JSON just yet
+            grammar_file=None,          # We don't need the grammar file for the map step
+            use_gpu=use_gpu,            # Because it doesn't need to output in JSON just yet
+            gpu_layers=gpu_layers,
         )
 
         # Clean the raw map output so we keep mostly bullet style lines
@@ -750,6 +759,8 @@ def summarize_general_chunked(
         max_tokens=1400,
         timeout_s=420,
         grammar_file=grammar_path if grammar_path.exists() else None,
+        use_gpu=use_gpu,
+        gpu_layers=gpu_layers,
     ).strip()
 
     # ----------------------------

@@ -129,6 +129,14 @@ class AppSettings:
     # 0 means "let llama.cpp decide automatically"
     llama_threads: int = 0
 
+    llama_use_gpu: bool = False
+    llama_gpu_layers: int = 999
+
+    # Diarization
+    enable_diarization: bool = False
+    diarization_python_path: str = ""
+    hf_token: str = ""
+
 # ---------------------------------------------------------
 # Create default settings
 # ---------------------------------------------------------
